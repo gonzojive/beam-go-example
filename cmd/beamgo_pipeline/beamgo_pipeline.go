@@ -60,6 +60,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -67,6 +68,7 @@ import (
 	"github.com/apache/beam/sdks/go/pkg/beam/io/textio"
 	"github.com/apache/beam/sdks/go/pkg/beam/transforms/stats"
 	"github.com/apache/beam/sdks/go/pkg/beam/x/beamx"
+	"github.com/gonzojive/beam-go-example/objectpb"
 
 	_ "github.com/apache/beam/sdks/go/pkg/beam/runners/flink"
 )
@@ -109,7 +111,9 @@ var (
 // by calling beam.RegisterFunction in an init() call.
 func init() {
 	beam.RegisterFunction(extractFn)
+	beam.RegisterFunction(extractProtoFn)
 	beam.RegisterFunction(formatFn)
+	beam.RegisterType(reflect.TypeOf(&objectpb.Object{}))
 }
 
 var (
@@ -119,13 +123,18 @@ var (
 )
 
 // extractFn is a DoFn that emits the words in a given line.
-func extractFn(ctx context.Context, line string, emit func(string)) {
+func extractFn(ctx context.Context, obj *objectpb.Object, emit func(string)) {
+	emit(obj.GetValue1())
+}
+
+// extractProtoFn is a DoFn that emits the words in a given line.
+func extractProtoFn(ctx context.Context, line string, emit func(*objectpb.Object)) {
 	lineLen.Update(ctx, int64(len(line)))
 	if len(strings.TrimSpace(line)) == 0 {
 		empty.Inc(ctx, 1)
 	}
 	for _, word := range wordRE.FindAllString(line, -1) {
-		emit(word)
+		emit(&objectpb.Object{Value1: word})
 	}
 }
 
@@ -151,8 +160,10 @@ func formatFn(w string, c int) string {
 func CountWords(s beam.Scope, lines beam.PCollection) beam.PCollection {
 	s = s.Scope("CountWords")
 
+	objCol := beam.ParDo(s, extractProtoFn, lines)
+
 	// Convert lines of text into individual words.
-	col := beam.ParDo(s, extractFn, lines)
+	col := beam.ParDo(s, extractFn, objCol)
 
 	// Count the number of times each word occurs.
 	return stats.Count(s, col)

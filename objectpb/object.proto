@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package beamexample;
+
+option go_package = "github.com/gonzojive/beam-go-example/objectpb";
+
+message Object {
+    string value1 = 1;
+    int32 value2 = 2;
+}

@@ -22,3 +22,12 @@ In another terminal:
 ```shell
 go run cmd/beamgo_pipeline/beamgo_pipeline.go --runner flink --endpoint localhost:8099 --output /tmp/output-flink.txt  --environment_type LOOPBACK
 ```
+
+
+## Regenerate the pb.go file
+
+```shell
+protoc -I objectpb --go_out=objectpb objectpb/object.proto
+mv objectpb/github.com/gonzojive/beam-go-example/objectpb/object.pb.go objectpb/
+rm -R objectpb/github.com
+```
